@@ -1,5 +1,4 @@
-
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -30,9 +29,38 @@ const AudioAnalysisComponent = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<number | null>(null);
   const { toast } = useToast();
+  
+  useEffect(() => {
+    fetchLastAnalysis();
+  }, []);
+
+  const fetchLastAnalysis = async () => {
+    try {
+      const res = await fetch('/api/audio/last');
+      if (!res.ok) return;
+
+      const data = await res.json();
+      setResults([
+        {
+          type: "Block",
+          count: 1,
+          confidence: 1,
+          examples: [data.analysisResult],
+        }
+      ]);
+    } catch (error) {
+      console.error('Failed to fetch last analysis', error);
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setAudioFile(file);
+    }
+  };
 
   const startRecording = () => {
-    // In a real app, this would use the MediaRecorder API
     setIsRecording(true);
     setRecordingTime(0);
     
@@ -82,60 +110,45 @@ const AudioAnalysisComponent = () => {
 
   const analyzeAudio = () => {
     if (!audioFile) return;
-    
+
     setIsAnalyzing(true);
     setProgress(0);
     setResults(null);
-    
+
+    const formData = new FormData();
+    formData.append('file', audioFile);
+
     // Simulate analysis progress
     const interval = setInterval(() => {
       setProgress(prev => {
         const newProgress = prev + Math.random() * 15;
         if (newProgress >= 100) {
           clearInterval(interval);
-          setTimeout(() => {
-            // Mock results - in a real app, this would come from ML models
-            const mockResults: StutterResult[] = [
-              {
-                type: "Block",
-                confidence: 0.85,
-                count: 7,
-                examples: ["b-b-book", "t-t-table"]
-              },
-              {
-                type: "Prolongation",
-                confidence: 0.78,
-                count: 5,
-                examples: ["sssssoon", "mmmmmaybe"]
-              },
-              {
-                type: "Repetition",
-                confidence: 0.92,
-                count: 12,
-                examples: ["and-and-and", "I-I-I"]
-              },
-              {
-                type: "Interjection",
-                confidence: 0.64,
-                count: 3,
-                examples: ["um", "uh"]
-              },
-              {
-                type: "Revision",
-                confidence: 0.71,
-                count: 4,
-                examples: ["I want- I need", "The blue- the red one"]
+
+          // Call the backend API to analyze the audio file
+          fetch('http://localhost:8080/api/audio/upload', {
+            method: 'POST',
+            body: formData,
+          })
+            .then(res => {
+              if (!res.ok) {
+                throw new Error('Failed to upload audio');
               }
-            ];
-            
-            setResults(mockResults);
-            setIsAnalyzing(false);
-            
-            toast({
-              title: "Analysis complete",
-              description: "Audio has been analyzed for stutter patterns",
+              return res.json();
+            })
+            .then(data => {
+              setResults(data.analysisResult); // Assuming the backend returns results in `analysisResult`
+              setIsAnalyzing(false);
+              toast({
+                title: "Analysis complete",
+                description: "Audio has been analyzed for stutter patterns",
+              });
+            })
+            .catch(error => {
+              console.error('Error analyzing audio:', error);
+              setIsAnalyzing(false);
             });
-          }, 500);
+
           return 100;
         }
         return newProgress;
