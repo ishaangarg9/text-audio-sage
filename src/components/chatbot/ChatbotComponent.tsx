@@ -81,7 +81,7 @@ const ChatbotComponent: React.FC = () => {
         <CardHeader>
           <CardTitle className="text-2xl">Speech Therapy Assistant</CardTitle>
           <CardDescription>
-            Ask questions about stuttering, speech therapy, or how to use this app
+            Ask questions about stuttering or speech therapy
           </CardDescription>
         </CardHeader>
         <CardContent>

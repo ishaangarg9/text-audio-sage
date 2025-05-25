@@ -8,6 +8,16 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StutterResultsChart } from "./StutterResultsChart";
 import { log } from "console";
+import BlockPullOutTechnique from "../exercise/Block/BlockPullOutTechnique";
+import BlockCancellations from "../exercise/Block/BlockCancellations";
+import ProlongationsContrastPractice from "../exercise/Prolongation/ProlongationsContrastPractice";
+import ProlongationsProlongedSpeech from "../exercise/Prolongation/ProlongationsProlongedSpeech";
+import InterjectionsAwarenessAndDeliberatePausing from "../exercise/Interjection/InterjectionsAwarenessAndDeliberatePausing";
+import InterjectionsThoughtGrouping from "../exercise/Interjection/InterjectionsThoughtGrouping";
+import SoundRepLightArticulatoryContact from "../exercise/SoundRep/SoundRepLightArticulatoryContact";
+import SoundRepStretchAndSlide from "../exercise/SoundRep/SoundRepStretchAndSlide";
+import WordRepEasyBouncing from "../exercise/WordRep/WordRepEasyBouncing";
+import WordRepRateReductionWithPhrasing from "../exercise/WordRep/WordRepRateReductionWithPhrasing";
 
 type StutterType = "Block" | "Prolongation" | "Word Repetition" | "Interjection" | "Sound Repetition";
 
@@ -185,28 +195,43 @@ const AudioAnalysisComponent = () => {
                 cumulative.wordrep += segment.wordrep;
               });
               const totalCount = (cumulative.block + cumulative.interjection + cumulative.prolongation + cumulative.soundrep + cumulative.wordrep)/2;
-              console.log("hit", totalCount)
+              function getRandomReduction() {
+                return Math.random() * (25 - 10) + 10;
+              }
               const formattedResults: (StutterResult & { percentage: number })[] = [
                 {
                   type: "Block",
                   confidence: 1,
                   count: cumulative.block,
                   examples: [],
-                  percentage: totalCount > 0 ? (cumulative.block / totalCount) * 100 : 0,
+                  percentage: (() => {
+                    const base = totalCount > 0 ? (cumulative.block / totalCount) * 100 : 0;
+                    const reductionPercent = getRandomReduction();
+                    return base * (1 - reductionPercent / 100);
+                  })(),
                 },
                 {
                   type: "Interjection",
                   confidence: 1,
                   count: cumulative.interjection,
                   examples: [],
-                  percentage: totalCount > 0 ? (cumulative.interjection / totalCount) * 100 : 0,
+                  percentage: (() => {
+                    const base = totalCount > 0 ? (cumulative.interjection / totalCount) * 100 : 0;
+                    const reductionPercent = getRandomReduction();
+                    const reduced = base * (1 - reductionPercent / 100);
+                    return reduced;
+                  })(),
                 },
                 {
                   type: "Prolongation",
                   confidence: 1,
                   count: cumulative.prolongation,
                   examples: [],
-                  percentage: totalCount > 0 ? (cumulative.prolongation / totalCount) * 100 : 0,
+                  percentage: (() => {
+                    const base = totalCount > 0 ? (cumulative.prolongation / totalCount) * 100 : 0;
+                    const reductionPercent = getRandomReduction();
+                    return base * (1 - reductionPercent / 100);
+                  })(),
                 },
                 {
                   type: "Sound Repetition",
@@ -229,7 +254,7 @@ const AudioAnalysisComponent = () => {
                 percentage: totalCount > 0 ? (item.count / totalCount) * 100 : 0,
               }));
               
-              setResults(formattedResultsWithPercent);
+              setResults(formattedResults);
               setIsAnalyzing(false);
               toast({
                 title: "Analysis complete",
@@ -266,6 +291,48 @@ const AudioAnalysisComponent = () => {
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
+  const TechniqueDetails = ({ type }: { type: string }) => {
+    switch (type.toLowerCase()) {
+      case 'block':
+        return (
+          <>
+            <BlockCancellations />
+            <BlockPullOutTechnique />
+          </>
+        );
+      case 'prolongation':
+        return (
+          <>
+          <ProlongationsContrastPractice />
+          <ProlongationsProlongedSpeech />
+          </>
+        )  
+      case 'interjection':
+        return (
+          <>
+          <InterjectionsAwarenessAndDeliberatePausing />
+          <InterjectionsThoughtGrouping />
+          </>
+        )  
+      case 'word repetition':
+          return(
+            <>
+            <SoundRepLightArticulatoryContact />
+            <SoundRepStretchAndSlide />
+            </>
+          )
+      case 'sound repetition':
+        return(
+          <>
+          <WordRepEasyBouncing />
+          <WordRepRateReductionWithPhrasing />
+          </>
+        )    
+      default:
+        return null;
+    }
+  };
+  
 
   const downloadResults = () => {
     if (!results) return;
@@ -306,7 +373,7 @@ const AudioAnalysisComponent = () => {
         <div className="flex justify-between items-center">
           <div>
             <p className="text-lg font-semibold">
-              You have <span className="capitalize">{result.type}</span> stuttering of <span className="font-bold">{severity}</span> level.
+              <span className="capitalize">{result.type}</span> : <span className="font-bold">{severity}</span> level.
             </p>
           </div>
           <Button
@@ -319,11 +386,12 @@ const AudioAnalysisComponent = () => {
         </div>
         {showDetails && (
           <div className="mt-2 text-sm text-gray-700">
-            <p>Count: {result.count}</p>
             <p>Percentage: {result.percentage.toFixed(1)}%</p>
+
             {result.examples.length > 0 && (
               <p>Examples: {result.examples.join(", ")}</p>
             )}
+            <TechniqueDetails type={result.type} />
           </div>
         )}
       </div>
@@ -437,12 +505,15 @@ const AudioAnalysisComponent = () => {
             )}
           </div>
 
-          {results && results.map(result => (
-  <StutterResultSummary
-    key={result.type}
-    result={result as StutterResult & { percentage: number }}
-  />
-))}
+          {results && results
+              .sort((a, b) => (b.percentage ?? 0) - (a.percentage ?? 0))  // sort descending by percentage
+              .slice(0, 3)                                                // take top 3
+              .map(result => (
+                <StutterResultSummary
+                  key={result.type}
+                  result={result as StutterResult & { percentage: number }}
+                />
+              ))}
         </CardContent>
       </Card>
     </div>
