@@ -1,5 +1,5 @@
 
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, TooltipProps } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, TooltipProps, Cell } from "recharts";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 type StutterType = "Block" | "Prolongation" | "Repetition" | "Interjection" | "Revision";
@@ -61,11 +61,11 @@ export const StutterResultsChart = ({ results }: StutterResultsChartProps) => {
         />
         <YAxis label={{ value: 'Count', angle: -90, position: 'insideLeft' }} />
         <Tooltip content={<CustomTooltip />} />
-        <Bar 
-          dataKey="count" 
-          name="Instances" 
-          fill={(data) => data.color || "#8884d8"} 
-        />
+        <Bar dataKey="count" name="Instances">
+          {data.map((entry, index) => (
+            <Cell key={`cell-${index}`} fill={entry.color} />
+          ))}
+        </Bar>
       </BarChart>
     </ResponsiveContainer>
   );
